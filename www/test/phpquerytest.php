@@ -1,10 +1,6 @@
 <? require($_SERVER["DOCUMENT_ROOT"] . "/bitrix/header.php"); ?>
 <?
 
-/*
- * Проверить на возможные конфликты NAME и ELEMENT_NAME
- */
-
 //ini_set('display_errors', 1);
 //error_reporting(E_ALL);
 
@@ -24,9 +20,7 @@ define("SKU_IBLOCK_ID", 13);
 // отсортируем товары, у которых количество = 0, и торговые предложения, у которых количество равно 0
 // и найдем парсеры, у которых возможно не указано количество по умолчанию
 
-//
-
-$itemsList = Phpquerytest\GetCatalogItems::getList(PRODUCT_IBLOCK_ID);
+$itemsList = Phpquerytest\GetCatalogItems::getList(PRODUCT_IBLOCK_ID, ["AVAILABLE"]);
 $skusList = Phpquerytest\GetCatalogItems::getList(SKU_IBLOCK_ID);
 
 // отбор пустых товаров
@@ -60,12 +54,12 @@ foreach ($skusList as $key => $value) {
         $orphanSkus[$key]["TYPE"] = $value["TYPE"];
         $orphanSkus[$key]["REASON"] = "Причина: торговое предложение не привязано к товару.";
     }
-    if (mb_strlen($value["ELEMENT_NAME"]) < 5){
+    if (mb_strlen($value["ELEMENT_NAME"]) < 5) {
         $suspiciousNames[$value["ID"]] = $value["ELEMENT_NAME"];
     }
 }
 
-// отбор элементов, у которых не указано свойство "Сайт"
+// отбор элементов, у которых не указано свойство "Сайт" (Заполняется у товара, не у ТП)
 // отбор товаров, у которых не заполнено свойство "Размер" ()
 $sitelessElementsArray = [];
 $sitelessElements = [];
@@ -73,25 +67,106 @@ $sitelessElements = [];
 $emptyItemSizeArray = [];
 $emptySkuSizeArray = [];
 
+// TODO продумать отбор аргументов
+
+$propertyAll = Phpquerytest\GetCatalogItems::getIBlockProperties(12);
 $propertySiteName = Phpquerytest\GetCatalogItems::getIBlockElementProperty(12, ["SITE_NAME"]);
-$propertyItemSize = Phpquerytest\GetCatalogItems::getIBlockElementProperty(12, ["SIZE"]);
+$propertyItemSize = Phpquerytest\GetCatalogItems::getIBlockElementProperty(12, ["SIZE", "SITE_NAME"]);
 $propertySkuSize = Phpquerytest\GetCatalogItems::getIBlockElementProperty(13, ["SIZE"]);
 
-echo "<pre>";
+//echo "<pre>";
+//print_r($propertyAll);
+//echo "</pre>";
+
+// простые товары, доступные к покупке, количество > 0, проверить у них заполненность поля "Размер"
+
+$simpleAvailableItems = [];
+foreach ($itemsList as $key => $value) {
+    if ($value["~TYPE"] === "1" && $value["AVAILABLE"] === "Y" && $value["QUANTITY"] > 0) {
+//        echo "<pre>";
+//        print_r($value);
+//        echo "</pre>";
+        $simpleAvailableItems[] = $value["ID"];
+    }
+}
+
+$propertyItemSizeIds = [];
+foreach ($propertyItemSize as $key => $value) {
+    $propertyItemSizeIds[] = $value["ID"];
+}
+
+//echo "<pre>";
+//print_r($simpleAvailableItems);
+//print_r($propertyItemSizeIds); // отобрать только ID
+//echo "</pre>";
+
+
+//echo "<pre>";
 //print_r($propertyItemSize);
-echo "</pre>";
+//echo "</pre>";
+
+// из выборки товаров 12го ИБ, в которой содержится размер выбрать только простые доступные товары
+$intersectArray = array_intersect($simpleAvailableItems, $propertyItemSizeIds);
+
+// среди этих товаров пробуем найти товары с заполненным размером.
+$sizeCandidates = [];
+foreach ($propertyItemSize as $key => $value) {
+    if (in_array($value["ID"], $intersectArray)) {
+        $sizeCandidates[] = $value;
+    }
+}
+
+// количество элементов в пересечении должно равняться кол-ву элементов в полученном ниже массиве кандидатов на заполненный размер.
+if (count($sizeCandidates) === count($intersectArray)) {
+    echo 'Размеры массивов $sizeCandidates и $intersectArray совпадают';
+}
+
+// простые товары с заполненным размером (их всего 2)
+$simpleItemsFilledSize = [];
+foreach ($sizeCandidates as $key => $value) {
+    if (!empty($value["PROPERTY_SIZE_VALUE"])) {
+        $simpleItemsFilledSize[] = $value;
+    }
+}
+
+//echo "<pre>";
+//print_r($simpleItemsFilledSize);
+//echo "</pre>";
+
+
+// Отберем ТП с пустым размером
+$emptySizeSkus = [];
+foreach ($propertySkuSize as $key => $value) {
+    if (empty($value["PROPERTY_SIZE_VALUE"])) {
+        $emptySizeSkus[] = $value;
+    }
+}
 
 echo "<pre>";
+echo (count($emptySizeSkus)) . " торговых предложений, у которых не заполнен размер. <br>\n";
+print_r($emptySizeSkus);
+echo "</pre>";
+
+
+//echo "<pre>";
+//print_r($sizeCandidates);
+//echo "</pre>";
+
+//echo "<pre>";
+//print_r($intersectArray);
+//echo "</pre>";
+
+//echo "<pre>";
 //print_r($propertySkuSize);
-echo "</pre>";
+//echo "</pre>";
 
-echo "<pre>";
+//echo "<pre>";
 //print_r($itemsList);
-echo "</pre>";
+//echo "</pre>";
 
-echo "<pre>";
+//echo "<pre>";
 //print_r($skusList);
-echo "</pre>";
+//echo "</pre>";
 
 foreach ($propertySiteName as $key => $value) {
     if (empty($value["PROPERTY_SITE_NAME_VALUE"]) || $value["PROPERTY_SITE_NAME_VALUE"] === "") {
@@ -102,10 +177,6 @@ foreach ($sitelessElementsArray as $key => $value) {
     $sitelessElements[$value["ID"]] = $value["NAME"];
 }
 
-foreach ($propertyItemSize as $key=>$value){
-//    if (empty($value[""]))
-}
-
 unset($key, $value);
 
 //file_put_contents($_SERVER["DOCUMENT_ROOT"] . "/test/logs/nullItems.log", "Простые товары, у которых количество = 0:\n\n" . print_r($nullItems, true));
@@ -113,7 +184,6 @@ unset($key, $value);
 //file_put_contents($_SERVER["DOCUMENT_ROOT"] . "/test/logs/orphanSkus.log", "Непривязанные к товару ТП:\n\n" . print_r($nullSkus, true));
 //file_put_contents($_SERVER["DOCUMENT_ROOT"] . "/test/logs/nullSite.log", "Товары, у которых не указан сайт:\n\n" . print_r($sitelessElements, true));
 //file_put_contents($_SERVER["DOCUMENT_ROOT"] . "/test/logs/suspiciousSkuNames.log", "ТП со слишком коротким названием:\n\n" . print_r($suspiciousNames, true));
-
 
 
 // Parser DEMO
