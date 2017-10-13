@@ -73,9 +73,9 @@ $sitelessElements = [];
 $emptyItemSizeArray = [];
 $emptySkuSizeArray = [];
 
-$propertySiteName = Phpquerytest\GetCatalogItems::getIBlockElementProperty(12, "SITE_NAME");
-$propertyItemSize = Phpquerytest\GetCatalogItems::getIBlockElementProperty(12, "SIZE");
-$propertySkuSize = Phpquerytest\GetCatalogItems::getIBlockElementProperty(13, "SIZE");
+$propertySiteName = Phpquerytest\GetCatalogItems::getIBlockElementProperty(12, ["SITE_NAME"]);
+$propertyItemSize = Phpquerytest\GetCatalogItems::getIBlockElementProperty(12, ["SIZE"]);
+$propertySkuSize = Phpquerytest\GetCatalogItems::getIBlockElementProperty(13, ["SIZE"]);
 
 echo "<pre>";
 //print_r($propertyItemSize);
