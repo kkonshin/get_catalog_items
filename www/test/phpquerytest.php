@@ -45,22 +45,22 @@ foreach ($skusList as $key => $value) {
     if ($value["QUANTITY"] === "0") {
         $nullSkus[$key]["ID"] = $value["ID"];
         $nullSkus[$key]["NAME"] = $value["ELEMENT_NAME"];
-        $orphanSkus[$key]["TYPE"] = $value["TYPE"];
+        $nullSkus[$key]["TYPE"] = $value["TYPE"];
         $nullSkus[$key]["REASON"] = "Причина: количество единиц торгового предложения равно 0.";
     }
-    if ($value["~TYPE"] === "5" || $value["TYPE"] === "Предложение без товара") {
+    if (($value["~TYPE"] === "5" || $value["TYPE"] === "Предложение без товара") && !empty($value["ID"])) {
         $orphanSkus[$key]["ID"] = $value["ID"];
         $orphanSkus[$key]["NAME"] = $value["ELEMENT_NAME"];
         $orphanSkus[$key]["TYPE"] = $value["TYPE"];
         $orphanSkus[$key]["REASON"] = "Причина: торговое предложение не привязано к товару.";
     }
-    if (mb_strlen($value["ELEMENT_NAME"]) < 5) {
+    if (mb_strlen($value["ELEMENT_NAME"]) < 5 || preg_match("/^(\d+|\W)/", $value["ELEMENT_NAME"])) {
         $suspiciousNames[$value["ID"]] = $value["ELEMENT_NAME"];
     }
 }
 
 // отбор элементов, у которых не указано свойство "Сайт" (Заполняется у товара, не у ТП)
-// отбор товаров, у которых не заполнено свойство "Размер" ()
+// отбор товаров, у которых не заполнено свойство "Размер"
 $sitelessElementsArray = [];
 $sitelessElements = [];
 
@@ -70,9 +70,9 @@ $emptySkuSizeArray = [];
 // TODO продумать отбор аргументов
 
 $propertyAll = Phpquerytest\GetCatalogItems::getIBlockProperties(12);
-$propertySiteName = Phpquerytest\GetCatalogItems::getIBlockElementProperty(12, ["SITE_NAME"]);
-$propertyItemSize = Phpquerytest\GetCatalogItems::getIBlockElementProperty(12, ["SIZE", "SITE_NAME"]);
-$propertySkuSize = Phpquerytest\GetCatalogItems::getIBlockElementProperty(13, ["SIZE"]);
+$propertySiteName = Phpquerytest\GetCatalogItems::getIBlockElementProperty(PRODUCT_IBLOCK_ID, ["SITE_NAME"]);
+$propertyItemSize = Phpquerytest\GetCatalogItems::getIBlockElementProperty(PRODUCT_IBLOCK_ID, ["SIZE", "SITE_NAME"]);
+$propertySkuSize = Phpquerytest\GetCatalogItems::getIBlockElementProperty(SKU_IBLOCK_ID, ["SIZE"]);
 
 //echo "<pre>";
 //print_r($propertyAll);
@@ -83,9 +83,6 @@ $propertySkuSize = Phpquerytest\GetCatalogItems::getIBlockElementProperty(13, ["
 $simpleAvailableItems = [];
 foreach ($itemsList as $key => $value) {
     if ($value["~TYPE"] === "1" && $value["AVAILABLE"] === "Y" && $value["QUANTITY"] > 0) {
-//        echo "<pre>";
-//        print_r($value);
-//        echo "</pre>";
         $simpleAvailableItems[] = $value["ID"];
     }
 }
@@ -100,12 +97,7 @@ foreach ($propertyItemSize as $key => $value) {
 //print_r($propertyItemSizeIds); // отобрать только ID
 //echo "</pre>";
 
-
-//echo "<pre>";
-//print_r($propertyItemSize);
-//echo "</pre>";
-
-// из выборки товаров 12го ИБ, в которой содержится размер выбрать только простые доступные товары
+// из выборки свойств товаров, в которой содержится свойство "Размер", выбрать только простые доступные товары
 $intersectArray = array_intersect($simpleAvailableItems, $propertyItemSizeIds);
 
 // среди этих товаров пробуем найти товары с заполненным размером.
@@ -118,10 +110,10 @@ foreach ($propertyItemSize as $key => $value) {
 
 // количество элементов в пересечении должно равняться кол-ву элементов в полученном ниже массиве кандидатов на заполненный размер.
 if (count($sizeCandidates) === count($intersectArray)) {
-    echo 'Размеры массивов $sizeCandidates и $intersectArray совпадают';
+//    echo 'Размеры массивов $sizeCandidates и $intersectArray совпадают';
 }
 
-// простые товары с заполненным размером (их всего 2)
+// простые товары с заполненным размером (их всего 2, остальные не заполнены)
 $simpleItemsFilledSize = [];
 foreach ($sizeCandidates as $key => $value) {
     if (!empty($value["PROPERTY_SIZE_VALUE"])) {
@@ -133,7 +125,6 @@ foreach ($sizeCandidates as $key => $value) {
 //print_r($simpleItemsFilledSize);
 //echo "</pre>";
 
-
 // Отберем ТП с пустым размером
 $emptySizeSkus = [];
 foreach ($propertySkuSize as $key => $value) {
@@ -142,11 +133,16 @@ foreach ($propertySkuSize as $key => $value) {
     }
 }
 
-echo "<pre>";
-echo (count($emptySizeSkus)) . " торговых предложений, у которых не заполнен размер. <br>\n";
-print_r($emptySizeSkus);
-echo "</pre>";
+// Подозрительные размеры
 
+$suspiciousSizeSkus = [];
+
+
+
+//echo "<pre>";
+//echo (count($emptySizeSkus)) . " торговых предложений, у которых не заполнен размер. <br>\n";
+//print_r($emptySizeSkus);
+//echo "</pre>";
 
 //echo "<pre>";
 //print_r($sizeCandidates);
@@ -179,11 +175,13 @@ foreach ($sitelessElementsArray as $key => $value) {
 
 unset($key, $value);
 
-//file_put_contents($_SERVER["DOCUMENT_ROOT"] . "/test/logs/nullItems.log", "Простые товары, у которых количество = 0:\n\n" . print_r($nullItems, true));
-//file_put_contents($_SERVER["DOCUMENT_ROOT"] . "/test/logs/nullSkus.log", "Торговые предложения, у которых количество = 0:\n\n" . print_r($nullSkus, true));
-//file_put_contents($_SERVER["DOCUMENT_ROOT"] . "/test/logs/orphanSkus.log", "Непривязанные к товару ТП:\n\n" . print_r($nullSkus, true));
-//file_put_contents($_SERVER["DOCUMENT_ROOT"] . "/test/logs/nullSite.log", "Товары, у которых не указан сайт:\n\n" . print_r($sitelessElements, true));
-//file_put_contents($_SERVER["DOCUMENT_ROOT"] . "/test/logs/suspiciousSkuNames.log", "ТП со слишком коротким названием:\n\n" . print_r($suspiciousNames, true));
+file_put_contents($_SERVER["DOCUMENT_ROOT"] . "/test/logs/nullItems.log", "Простые товары, у которых количество = 0:\n\n" . print_r($nullItems, true));
+file_put_contents($_SERVER["DOCUMENT_ROOT"] . "/test/logs/nullSkus.log", "Торговые предложения, у которых количество = 0:\n\n" . print_r($nullSkus, true));
+file_put_contents($_SERVER["DOCUMENT_ROOT"] . "/test/logs/orphanSkus.log", "Непривязанные к товару ТП:\n\n" . print_r($orphanSkus, true));
+file_put_contents($_SERVER["DOCUMENT_ROOT"] . "/test/logs/nullSite.log", "Товары, у которых не указан сайт:\n\n" . print_r($sitelessElements, true));
+file_put_contents($_SERVER["DOCUMENT_ROOT"] . "/test/logs/suspiciousSkuNames.log", "ТП с неадекватным названием:\n\n" . print_r($suspiciousNames, true));
+file_put_contents($_SERVER["DOCUMENT_ROOT"] . "/test/logs/emptySkuSize.log", "Пустой размер у ТП:\n\n" . print_r($emptySizeSkus, true));
+
 
 
 // Parser DEMO
