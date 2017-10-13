@@ -21,10 +21,14 @@ Loader::includeModule("iblock");
  */
 class GetCatalogItems
 {
-    public static function getList($iblockId, Array $properties = ["ID", "ELEMENT_NAME", "TYPE", "QUANTITY"])
+    public static function getList($iblockId, Array $properties = [])
     {
 
+         $properties = array_merge(["ID", "ELEMENT_NAME", "TYPE", "QUANTITY"], $properties);
+
+
         //TODO нормальную обработку исключений
+
 
         if ($iblockId <= 0 || !is_int($iblockId)) {
 //            throw new Exception("ID информационного блока должен быть целым положительным числом большим нуля");
@@ -46,7 +50,6 @@ class GetCatalogItems
             ["ELEMENT_IBLOCK_ID" => $iblockId],
             false,
             false,
-//            ["ID", "ELEMENT_NAME", "TYPE", "QUANTITY"]
             $properties
         );
         while ($res = $catalogItems->GetNext()) {
@@ -84,19 +87,19 @@ class GetCatalogItems
         return $iblockPropertiesArray;
     }
 
-    public static function getIBlockElementProperty($iblockId, Array $properties)
+    public static function getIBlockElementProperty($iblockId, Array $properties = [])
     {
-        // к каждому переданному свойству добавить PROPERTY_
+        $propertiesArray = [];
 
         foreach ($properties as $property){
-            echo $property . "<br>";
+            $property = "PROPERTY_" . $property;
+            $propertiesArray[] = $property;
         }
 
-        $propertiesArray = array_merge(["IBLOCK_ID", "ID", "NAME"], $properties);
+        $propertiesArray = array_merge(["IBLOCK_ID", "ID", "NAME"], $propertiesArray);
 
         $elementListArray = [];
 
-//        $elementList = \CIBlockElement::GetList(["ID" => "ASC"], ["IBLOCK_ID" => $iblockId, "ACTIVE" => "Y"], false, false, ["IBLOCK_ID", "ID", "NAME", "PROPERTY_{$property}"]);
         $elementList = \CIBlockElement::GetList(["ID" => "ASC"], ["IBLOCK_ID" => $iblockId, "ACTIVE" => "Y"], false, false, $propertiesArray);
 
         while ($res = $elementList->GetNext()) {
