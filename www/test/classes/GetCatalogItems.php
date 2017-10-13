@@ -24,7 +24,7 @@ class GetCatalogItems
     public static function getList($iblockId, Array $properties = [])
     {
 
-         $properties = array_merge(["ID", "ELEMENT_NAME", "TYPE", "QUANTITY"], $properties);
+        $properties = array_merge(["ID", "ELEMENT_NAME", "TYPE", "QUANTITY"], $properties);
 
 
         //TODO нормальную обработку исключений
@@ -91,7 +91,7 @@ class GetCatalogItems
     {
         $propertiesArray = [];
 
-        foreach ($properties as $property){
+        foreach ($properties as $property) {
             $property = "PROPERTY_" . $property;
             $propertiesArray[] = $property;
         }
@@ -107,4 +107,5 @@ class GetCatalogItems
         }
         return $elementListArray;
     }
+    //TODO рефактор
 }
