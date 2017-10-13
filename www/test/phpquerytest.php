@@ -133,7 +133,7 @@ foreach ($propertySkuSize as $key => $value) {
     }
 }
 
-// Подозрительные размеры
+// TODO Подозрительные размеры
 
 $suspiciousSizeSkus = [];
 
@@ -177,7 +177,7 @@ unset($key, $value);
 
 file_put_contents($_SERVER["DOCUMENT_ROOT"] . "/test/logs/nullItems.log", "Простые товары, у которых количество = 0:\n\n" . print_r($nullItems, true));
 file_put_contents($_SERVER["DOCUMENT_ROOT"] . "/test/logs/nullSkus.log", "Торговые предложения, у которых количество = 0:\n\n" . print_r($nullSkus, true));
-file_put_contents($_SERVER["DOCUMENT_ROOT"] . "/test/logs/orphanSkus.log", "Непривязанные к товару ТП:\n\n" . print_r($orphanSkus, true));
+file_put_contents($_SERVER["DOCUMENT_ROOT"] . "/test/logs/orphanSkus.log", "Не привязанные к товару ТП:\n\n" . print_r($orphanSkus, true));
 file_put_contents($_SERVER["DOCUMENT_ROOT"] . "/test/logs/nullSite.log", "Товары, у которых не указан сайт:\n\n" . print_r($sitelessElements, true));
 file_put_contents($_SERVER["DOCUMENT_ROOT"] . "/test/logs/suspiciousSkuNames.log", "ТП с неадекватным названием:\n\n" . print_r($suspiciousNames, true));
 file_put_contents($_SERVER["DOCUMENT_ROOT"] . "/test/logs/emptySkuSize.log", "Пустой размер у ТП:\n\n" . print_r($emptySizeSkus, true));
